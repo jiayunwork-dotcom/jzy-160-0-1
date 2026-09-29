@@ -1,0 +1,38 @@
+# 多阶段构建可显著减小最终镜像体积；docker compose 会自动构建本镜像
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: prony-service:latest
+    container_name: prony-app
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      MONGO_URI: mongodb://mongo:27017/prony
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: prony-mongo
+    restart: unless-stopped
+    # 命名卷持久化数据库文件
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  mongo-data:
+    name: prony-mongo-data
